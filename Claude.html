@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Island Life Simulation</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0a0a0a;
+        }
+        canvas { display: block; }
+        .panel {
+            position: absolute;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        #ui-container {
+            top: 10px;
+            left: 10px;
+            min-width: 220px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        #npc-info {
+            right: 10px;
+            top: 10px;
+            max-width: 320px;
+            max-height: 85vh;
+            overflow-y: auto;
+            display: none;
+        }
+        .info-section {
+            margin-top: 12px;
+            padding: 8px;
+            background-color: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            border-left: 3px solid #4CAF50;
+        }
+        h3, h4 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            color: #8be9fd;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #3e8e41;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #333;
+            margin: 5px 0;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+        #stats-display {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .tab-container {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .tab {
+            padding: 5px 10px;
+            margin-right: 5px;
+            cursor: pointer;
+            background-color: #333;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .thought-bubble {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 8px;
+            margin-top: 5px;
+            position: relative;
+        }
+        .thought-bubble:before {
+            content: "";
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            border-width: 0 10px 10px;
+            border-style: solid;
+            border-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+        .resource-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-container" class="panel">
+        <h3>Island Life Simulation</h3>
+        <div class="tab-container">
+            <div class="tab active" data-tab="main">Main</div>
+            <div class="tab" data-tab="resources">Resources</div>
+            <div class="tab" data-tab="governance">Governance</div>
+        </div>
+        
+        <div class="tab-content active" id="main-tab">
+            <div>Population: <span id="population-count">0</span></div>
+            <div>Buildings: <span id="building-count">0</span></div>
+            <div>Day: <span id="day-count">1</span></div>
+            <div>Time: <span id="day-time">Morning</span></div>
+            
+            <div class="info-section">
+                <h4>Island Statistics</h4>
+                <div>Average Happiness: <span id="avg-happiness">0</span>%</div>
+                <div>Deaths: <span id="death-count">0</span></div>
+                <div>Births: <span id="birth-count">0</span></div>
+                <div>Food Consumed: <span id="food-consumed">0</span></div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="resources-tab">
+            <div class="info-section">
+                <h4>Community Resources</h4>
+                <div>Food: <span id="community-food">0</span></div>
+                <div>Water: <span id="community-water">0</span></div>
+                <div>Materials: <span id="community-materials">0</span></div>
+            </div>
+            
+            <div class="info-section">
+                <h4>Resource Map</h4>
+                <div><span class="resource-indicator" style="background-color: #FF0000;"></span> Food Sources: <span id="food-sources">0</span></div>
+                <div><span class="resource-indicator" style="background-color: #0000FF;"></span> Water Sources: <span id="water-sources">0</span></div>
+                <div><span class="resource-indicator" style="background-color: #808080;"></span> Material Sources: <span id="material-sources">0</span></div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="governance-tab">
+            <div class="info-section">
+                <h4>Governance</h4>
+                <div>Mayor: <span id="mayor-name">None</span></div>
+                <div>Term: <span id="mayor-term">0</span> days</div>
+                <div>Next election: <span id="next-election">0</span> days</div>
+                <div>Current law: <span id="current-law">None</span></div>
+            </div>
+            
+            <div class="info-section">
+                <h4>Buildings</h4>
+                <div>Town Hall: <span id="townhall-count">0</span></div>
+                <div>Storages: <span id="storage-count">0</span></div>
+                <div>Houses: <span id="house-count">0</span></div>
+                <div>Farms: <span id="farm-count">0</span></div>
+            </div>
+        </div>
+        
+        <div id="controls" style="margin-top: 15px;">
+            <button class="button" id="add-npc">Add Villager</button>
+            <button class="button" id="speed-toggle">Speed: x1</button>
+            <button class="button" id="call-election">Call Election</button>
+            <button class="button" id="toggle-resource-view">Show Resources</button>
+        </div>
+    </div>
+    
+    <div id="npc-info" class="panel">
+        <h3 id="npc-name">Villager</h3>
+        <div>Age: <span id="npc-age">0</span></div>
+        <div>Gender: <span id="npc-gender">-</span></div>
+        <div>State: <span id="npc-state">-</span></div>
+        <div>Role: <span id="npc-role">Citizen</span></div>
+        
+        <div class="info-section">
+            <h4>Vital Stats</h4>
+            <div>Health:</div>
+            <div class="progress-bar"><div id="health-bar" class="progress-fill" style="width: 100%; background-color: #4CAF50;"></div></div>
+            <div>Hunger:</div>
+            <div class="progress-bar"><div id="hunger-bar" class="progress-fill" style="width: 20%; background-color: #FFC107;"></div></div>
+            <div>Thirst:</div>
+            <div class="progress-bar"><div id="thirst-bar" class="progress-fill" style="width: 20%; background-color: #2196F3;"></div></div>
+            <div>Energy:</div>
+            <div class="progress-bar"><div id="energy-bar" class="progress-fill" style="width: 100%; background-color: #9C27B0;"></div></div>
+            <div>Happiness:</div>
+            <div class="progress-bar"><div id="happiness-bar" class="progress-fill" style="width: 70%; background-color: #E91E63;"></div></div>
+        </div>
+        
+        <div class="info-section">
+            <h4>Inventory</h4>
+            <div>Food: <span id="npc-food">0</span></div>
+            <div>Water: <span id="npc-water">0</span></div>
+            <div>Materials: <span id="npc-materials">0</span></div>
+        </div>
+        
+        <div class="info-section">
+            <h4>Skills</h4>
+            <div>Construction: <span id="skill-building">0</span></div>
+            <div>Gathering: <span id="skill-gathering">0</span></div>
+            <div>Farming: <span id="skill-farming">0</span></div>
+            <div>Hunting: <span id="skill-hunting">0</span></div>
+            <div>Social: <span id="skill-social">0</span></div>
+            <div>Leadership: <span id="skill-leadership">0</span></div>
+        </div>
+        
+        <div class="info-section">
+            <h4>Recent Thoughts</h4>
+            <div id="thoughts-container">
+                <div class="thought-bubble" id="npc-thoughts">No thoughts yet.</div>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <h4>Votes & Opinions</h4>
+            <div>Preferred candidate: <span id="npc-preferred-candidate">None</span></div>
+            <div>Political opinion: <span id="npc-opinion">Neutral</span></div>
+        </div>
+    </div>
+
+    <div id="stats-display"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
+    <script>
+class IslandSimulation {
+    constructor() {
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setClearColor(0x87CEEB);
+        document.body.appendChild(this.renderer.domElement);
+
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.camera.position.set(0, 50, 50);
+        this.controls.update();
+
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+
+        this.addLighting();
+        this.npcs = [];
+        this.resources = [];
+        this.buildings = [];
+        this.roads = [];
+        this.gameTime = 0;
+        this.dayDuration = 600; // durée d'une journée en "ticks"
+        this.dayCount = 1;
+        this.timeSpeed = 1;
+        this.selectedNPC = null;
+        
+        // Initialisation des données de gouvernance
+        this.governance = {
+            mayor: null,
+            term: 0,
+            nextElection: 10,
+            currentLaw: "Aucune",
+            votes: {}
+        };
+        
+        // Initialisation des ressources communautaires
+        this.communityResources = {
+            food: 50,
+            water: 50,
+            materials: 100
+        };
+
+        // Système de construction
+        this.availableBuildings = {
+            house: {
+                name: "Maison",
+                cost: { materials: 50 },
+                effect: { populationCapacity: 5 },
+                buildTime: 10,
+                model: this.createHouseModel()
+            },
+            farm: {
+                name: "Ferme",
+                cost: { materials: 100, food: 20 },
+                effect: { foodProduction: 5 },
+                buildTime: 20,
+                model: this.createFarmModel()
+            },
+            storage: {
+                name: "Entrepôt",
+                cost: { materials: 150 },
+                effect: { storageCapacity: 200 },
+                buildTime: 30,
+                model: this.createStorageModel()
+            }
+        };
+        this.buildingQueue = [];
+        this.completedBuildings = [];
+
+        // Système économique
+        this.economy = {
+            marketItems: [
+                { type: 'food', price: 2, fluctuation: 0.1 },
+                { type: 'materials', price: 5, fluctuation: 0.2 },
+                { type: 'water', price: 3, fluctuation: 0.15 },
+                { type: 'building', price: 100, fluctuation: 0.3 }
+            ],
+            updateMarket: function() {
+                this.marketItems.forEach(item => {
+                    item.price *= 1 + (Math.random() * 0.4 - 0.2);
+                });
+            }
+        };
+
+        this.generateIsland();
+        this.spawnInitialPopulation(10);
+        this.setupUI();
+
+        this.lastTime = Date.now();
+        this.animate();
+
+        window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('click', (event) => this.onMouseClick(event));
+        document.getElementById('add-npc').addEventListener('click', () => this.addNewNPC());
+        document.getElementById('speed-toggle').addEventListener('click', () => this.toggleSpeed());
+        document.getElementById('call-election').addEventListener('click', () => this.callElection());
+    }
+
+    addLighting() {
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        this.scene.add(ambientLight);
+        this.sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        this.sunLight.position.set(100, 100, 50);
+        this.sunLight.castShadow = true;
+        this.scene.add(this.sunLight);
+        this.renderer.shadowMap.enabled = true;
+    }
+
+    generateIsland() {
+        const geometry = new THREE.CircleGeometry(100, 32);
+        const material = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.8, metalness: 0.2 });
+        this.island = new THREE.Mesh(geometry, material);
+        this.island.rotation.x = -Math.PI / 2;
+        this.island.receiveShadow = true;
+        this.scene.add(this.island);
+
+        const waterGeometry = new THREE.PlaneGeometry(500, 500);
+        const waterMaterial = new THREE.MeshStandardMaterial({ color: 0x0077be, transparent: true, opacity: 0.8, roughness: 0.1, metalness: 0.6 });
+        this.water = new THREE.Mesh(waterGeometry, waterMaterial);
+        this.water.rotation.x = -Math.PI / 2;
+        this.water.position.y = -0.5;
+        this.scene.add(this.water);
+
+        this.generateTerrain();
+        this.placeInitialResources();
+        this.createTownHall();
+    }
+
+    generateTerrain() {
+        for (let i = 0; i < 10; i++) {
+            const radius = 5 + Math.random() * 15;
+            const height = 2 + Math.random() * 8;
+            const hillGeometry = new THREE.ConeGeometry(radius, height, 16);
+            const hillMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.9, metalness: 0 });
+            const hill = new THREE.Mesh(hillGeometry, hillMaterial);
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 70;
+            hill.position.set(Math.cos(angle) * distance, height / 2, Math.sin(angle) * distance);
+            hill.receiveShadow = true;
+            hill.castShadow = true;
+            this.scene.add(hill);
+        }
+        for (let i = 0; i < 50; i++) this.createTree();
+    }
+
+    createTree() {
+        const tree = new THREE.Group();
+        const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.7, 4, 8);
+        const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9 });
+        const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+        trunk.position.y = 2;
+        trunk.castShadow = true;
+        trunk.receiveShadow = true;
+        tree.add(trunk);
+        const foliageGeometry = new THREE.ConeGeometry(3, 6, 8);
+        const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.8 });
+        const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+        foliage.position.y = 6;
+        foliage.castShadow = true;
+        foliage.receiveShadow = true;
+        tree.add(foliage);
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 20 + Math.random() * 75;
+        tree.position.set(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
+        this.scene.add(tree);
+        return tree;
+    }
+
+    placeInitialResources() {
+        for (let i = 0; i < 15; i++) this.resources.push(this.createResource('food'));
+        for (let i = 0; i < 5; i++) this.resources.push(this.createResource('water'));
+        for (let i = 0; i < 20; i++) this.resources.push(this.createResource('material'));
+    }
+
+    createResource(type) {
+        let resource;
+        switch (type) {
+            case 'food':
+                resource = new THREE.Group();
+                const bushGeometry = new THREE.SphereGeometry(1.5, 8, 8);
+                const bushMaterial = new THREE.MeshStandardMaterial({ color: 0x006400, roughness: 0.8 });
+                const bush = new THREE.Mesh(bushGeometry, bushMaterial);
+                bush.castShadow = true;
+                bush.receiveShadow = true;
+                resource.add(bush);
+                for (let i = 0; i < 8; i++) {
+                    const berryGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+                    const berryMaterial = new THREE.MeshStandardMaterial({ color: 0xFF0000, roughness: 0.5, metalness: 0.2 });
+                    const berry = new THREE.Mesh(berryGeometry, berryMaterial);
+                    const berryAngle = Math.random() * Math.PI * 2;
+                    const berryHeight = Math.random() * 2 - 0.5;
+                    berry.position.set(Math.cos(berryAngle) * 1.2, berryHeight, Math.sin(berryAngle) * 1.2);
+                    berry.castShadow = true;
+                    resource.add(berry);
+                }
+                break;
+            case 'water':
+                const pondGeometry = new THREE.CircleGeometry(3 + Math.random() * 3, 16);
+                const pondMaterial = new THREE.MeshStandardMaterial({ color: 0x4169E1, transparent: true, opacity: 0.8, roughness: 0.1, metalness: 0.6 });
+                resource = new THREE.Mesh(pondGeometry, pondMaterial);
+                resource.rotation.x = -Math.PI / 2;
+                resource.position.y = 0.1;
+                break;
+            case 'material':
+                resource = new THREE.Group();
+                const rockCount = 3 + Math.floor(Math.random() * 4);
+                for (let i = 0; i < rockCount; i++) {
+                    const rockGeometry = new THREE.DodecahedronGeometry(0.5 + Math.random(), 0);
+                    const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.9, metalness: 0.1 });
+                    const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+                    rock.position.set((Math.random() - 0.5) * 2, Math.random() * 0.5, (Math.random() - 0.5) * 2);
+                    rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                    rock.castShadow = true;
+                    rock.receiveShadow = true;
+                    resource.add(rock);
+                }
+                break;
+        }
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 10 + Math.random() * 80;
+        resource.position.set(Math.cos(angle) * distance, type === 'water' ? 0.1 : 0.5, Math.sin(angle) * distance);
+        resource.userData = { type, amount: 100 + Math.floor(Math.random() * 100), regrowRate: type === 'food' ? 0.1 : 0.05 };
+        this.scene.add(resource);
+        return resource;
+    }
+
+    // Création d'un hôtel de ville
+    createTownHall() {
+        const townHall = new THREE.Group();
+        
+        // Base du bâtiment
+        const baseGeometry = new THREE.BoxGeometry(10, 5, 10);
+        const baseMaterial = new THREE.MeshStandardMaterial({ color: 0xA0522D, roughness: 0.8 });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        base.position.y = 2.5;
+        base.castShadow = true;
+        base.receiveShadow = true;
+        townHall.add(base);
+        
+        // Toit
+        const roofGeometry = new THREE.ConeGeometry(8, 4, 4);
+        const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x8B0000, roughness: 0.7 });
+        const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+        roof.position.y = 7;
+        roof.rotation.y = Math.PI / 4;
+        roof.castShadow = true;
+        townHall.add(roof);
+        
+        // Drapeau
+        const poleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 3, 8);
+        const poleMaterial = new THREE.MeshStandardMaterial({ color: 0x4d4d4d });
+        const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+        pole.position.y = 10;
+        townHall.add(pole);
+        
+        const flagGeometry = new THREE.PlaneGeometry(1.5, 1);
+        const flagMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, side: THREE.DoubleSide });
+        const flag = new THREE.Mesh(flagGeometry, flagMaterial);
+        flag.position.set(0.75, 10.5, 0);
+        flag.castShadow = true;
+        townHall.add(flag);
+        
+        townHall.position.set(0, 0, 0);
+        townHall.userData = { type: 'townhall' };
+        this.scene.add(townHall);
+        this.buildings.push(townHall);
+        
+        return townHall;
+    }
+
+    spawnInitialPopulation(count) {
+        for (let i = 0; i < count; i++) this.npcs.push(this.createNPC());
+        this.updateUIStats();
+    }
+
+    createNPC() {
+        const npc = new THREE.Group();
+        const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.5, 8);
+        const bodyMaterial = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff, roughness: 0.7 });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.y = 1;
+        body.castShadow = true;
+        npc.add(body);
+        const headGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+        const headMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD700, roughness: 0.5 });
+        const head = new THREE.Mesh(headGeometry, headMaterial);
+        head.position.y = 1.9;
+        head.castShadow = true;
+        npc.add(head);
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * 20;
+        npc.position.set(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
+
+        // Attribution d'un rôle
+        const roles = ['Builder', 'Farmer', 'Gatherer', 'Leader'];
+        const role = roles[Math.floor(Math.random() * roles.length)];
+        
+        const data = {
+            name: this.generateName(),
+            age: 20 + Math.floor(Math.random() * 40),
+            gender: Math.random() > 0.5 ? 'male' : 'female',
+            health: 100,
+            hunger: 20 + Math.floor(Math.random() * 30),
+            thirst: 20 + Math.floor(Math.random() * 30),
+            energy: 100,
+            happiness: 70 + Math.floor(Math.random() * 30),
+            skills: { 
+                building: 1 + Math.random() * 5, 
+                gathering: 1 + Math.random() * 5, 
+                farming: 1 + Math.random() * 5, 
+                social: 1 + Math.random() * 5, 
+                hunting: 1 + Math.random() * 5, 
+                leadership: 1 + Math.random() * 5 
+            },
+            personality: { 
+                extraversion: Math.random(), 
+                agreeableness: Math.random(), 
+                conscientiousness: Math.random(), 
+                openness: Math.random() 
+            },
+            relationships: {},
+            inventory: { 
+                food: 10, 
+                water: 10, 
+                materials: 5,
+                money: 100
+            },
+            state: 'idle',
+            role: role,
+            targetPosition: null,
+            targetEntity: null,
+            targetBuilding: null,
+            home: null,
+            workplace: null,
+            thoughts: [],
+            memories: [],
+            spouse: null,
+            team: null
+        };
+
+        // Ajuster les compétences selon le rôle
+        switch(role) {
+            case 'Builder':
+                data.skills.building += 3;
+                data.skills.gathering += 1;
+                break;
+            case 'Farmer':
+                data.skills.farming += 3;
+                data.skills.hunting += 1;
+                break;
+            case 'Leader':
+                data.skills.leadership += 4;
+                data.skills.social += 2;
+                break;
+        }
+
+        npc.userData = data;
+        this.createNPCLabel(npc);
+        this.scene.add(npc);
+        return npc;
+    }
+
+    createNPCLabel(npc) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 256;
+        canvas.height = 64;
+        context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.font = '24px Arial';
+        context.fillStyle = 'white';
+        context.textAlign = 'center';
+        context.fillText(npc.userData.name, canvas.width / 2, 24);
+        context.font = '16px Arial';
+        context.fillText(`Status: ${npc.userData.state}`, canvas.width / 2, 48);
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(material);
+        sprite.position.y = 2.5;
+        sprite.scale.set(2, 0.5, 1);
+        npc.add(sprite);
+        npc.userData.label = sprite;
+        npc.userData.labelCanvas = canvas;
+        npc.userData.labelContext = context;
+    }
+
+    updateNPCLabel(npc) {
+        const context = npc.userData.labelContext;
+        const canvas = npc.userData.labelCanvas;
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.font = '24px Arial';
+        context.fillStyle = 'white';
+        context.textAlign = 'center';
+        context.fillText(npc.userData.name, canvas.width / 2, 24);
+        context.font = '16px Arial';
+        context.fillStyle = npc.userData.hunger > 70 || npc.userData.thirst > 70 ? '#FF6347' : npc.userData.happiness < 30 ? '#FFA500' : '#98FB98';
+        context.fillText(`${npc.userData.state} | H:${Math.floor(npc.userData.health)}`, canvas.width / 2, 48);
+        npc.userData.label.material.map.needsUpdate = true;
+    }
+
+    generateName() {
+        const firstNames = ['Aria', 'Elian', 'Thorn', 'Sage', 'Mira', 'Felix', 'Lyra', 'Orion', 'Nova', 'Zephyr', 'Ember', 'Finn', 'Willow', 'Rowan', 'Luna', 'Sol'];
+        const lastNames = ['Brook', 'Stone', 'Marsh', 'Reed', 'Grove', 'Coast', 'Wind', 'Field', 'Hill', 'Vale', 'Ford', 'Glen', 'Wood', 'Dale', 'Crest', 'Shore'];
+        return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    }
+
+    generatePoliticalOpinion() {
+        const opinions = ['Conservateur', 'Progressiste', 'Libertaire', 'Neutre', 'Collectiviste'];
+        return opinions[Math.floor(Math.random() * opinions.length)];
+    }
+
+    updateNPCs(deltaTime) {
+        for (let i = 0; i < this.npcs.length; i++) {
+            const npc = this.npcs[i];
+            const data = npc.userData;
+            data.hunger += 0.02 * deltaTime * this.timeSpeed;
+            data.thirst += 0.03 * deltaTime * this.timeSpeed;
+            data.energy -= 0.01 * deltaTime * this.timeSpeed;
+            if (data.hunger > 80 || data.thirst > 85) {
+                data.health -= 0.05 * deltaTime * this.timeSpeed;
+                data.happiness -= 0.1 * deltaTime * this.timeSpeed;
+            } else {
+                data.health = Math.min(100, data.health + 0.01 * deltaTime * this.timeSpeed);
+            }
+            if (data.state === 'resting') {
+                data.energy = Math.min(100, data.energy + 0.1 * deltaTime * this.timeSpeed);
+                if (data.energy > 90) data.state = 'idle';
+            }
+            if (data.health <= 0) {
+                this.handleNPCDeath(npc, i);
+                continue;
+            }
+            this.updateNPCBehavior(npc, deltaTime);
+            this.updateNPCMovement(npc, deltaTime);
+            this.updateNPCSocialInteractions(npc, deltaTime);
+            this.updateNPCLabel(npc);
+            
+            // Décision de contribuer aux ressources communautaires
+            if (data.state === 'idle' && Math.random() < 0.01 * deltaTime * this.timeSpeed) {
+                this.contributeToCommunityCycle(npc);
+            }
+        }
+        if (Math.random() < 0.0001 * deltaTime * this.timeSpeed && this.npcs.length < 50) this.triggerReproduction();
+        if (this.selectedNPC) this.updateNPCInfo(this.selectedNPC);
+        
+        // Gestion des élections et mandats
+        if (this.dayCount % this.governance.nextElection === 0 && this.gameTime % this.dayDuration < deltaTime * this.timeSpeed) {
+            this.callElection();
+        }
+        
+        // Régénération des ressources
+        this.regenerateResources(deltaTime);
+        
+        // Mise à jour des ressources communautaires dans l'interface
+        this.updateCommunityResourcesUI();
+        
+        // Mise à jour de la construction
+        this.updateConstruction(deltaTime);
+        
+        // Mise à jour du marché
+        if (this.gameTime % (this.dayDuration / 4) < deltaTime * this.timeSpeed) {
+            this.economy.updateMarket();
+        }
+        
+        this.updateUIStats();
+    }
+
+    updateNPCBehavior(npc, deltaTime) {
+        const data = npc.userData;
+        
+        // Comportement spécifique au rôle
+        if (data.state === 'idle') {
+            switch(data.role) {
+                case 'Builder':
+                    if (this.buildingQueue.length > 0 && Math.random() < 0.3) {
+                        const project = this.buildingQueue[0];
+                        data.targetBuilding = project;
+                        data.targetPosition = project.location.clone();
+                        data.state = 'building';
+                        data.thoughts.push({ 
+                            content: "Je vais aider à la construction.", 
+                            time: this.gameTime 
+                        });
+                        return;
+                    }
+                    break;
+                    
+                case 'Farmer':
+                    if (Math.random() < 0.3) {
+                        this.manageFarming(npc);
+                        return;
+                    }
+                    break;
+            }
+        }
+
+        // Mise à jour des compétences basée sur les actions
+        if (data.state === 'gathering') {
+            data.skills.gathering += 0.01 * deltaTime * this.timeSpeed;
+            // Chance de découvrir une nouvelle technique
+            if (Math.random() < 0.001 * data.skills.gathering) {
+                data.skills.gathering += 0.5;
+                data.thoughts.push({ content: "J'ai découvert une meilleure façon de récolter!", time: this.gameTime });
+            }
+        }
+
+        // États actifs qui ne devraient pas être interrompus sauf urgence
+        if (['moving_to_resource', 'building', 'gathering', 'socializing', 'resting', 'moving_to_npc'].includes(data.state)) {
+            // Vérification de la durée de l'état pour éviter les blocages
+            if (!data.stateStartTime) data.stateStartTime = this.gameTime;
+            const stateTime = this.gameTime - data.stateStartTime;
+            
+            // Si bloqué trop longtemps dans le même état
+            if (stateTime > 20 && data.state === 'gathering') {
+                data.state = 'idle';
+                data.stateStartTime = null;
+                data.thoughts.push({ content: "Je devrais faire autre chose...", time: this.gameTime });
+                return;
+            }
+
+            if (data.state === 'moving_to_resource' && data.targetEntity) {
+                const distance = npc.position.distanceTo(data.targetEntity.position);
+                if (distance < 2) {
+                    this.gatherResource(npc, data.targetEntity);
+                    // Apprentissage par l'expérience
+                    if (data.targetEntity.userData.type === 'material') {
+                        data.skills.building += 0.05;
+                    }
+                }
+            }
+
+            // Besoins urgents seulement peuvent interrompre
+            if (data.hunger > 90 || data.thirst > 90) {
+                data.state = 'idle';
+                data.stateStartTime = null;
+            }
+            return;
+        }
+
+        // Réinitialisation du temps d'état pour le nouvel état
+        data.stateStartTime = this.gameTime;
+
+        // Système de prise de décision basé sur les besoins et la personnalité
+        if (data.state === 'idle') {
+            // Création d'un score pour chaque action possible
+            const actions = [
+                {
+                    name: 'gather',
+                    score: (data.skills.gathering * 0.5) + (data.personality.conscientiousness * 30) + 
+                           (data.inventory.materials < 20 ? 40 : 0)
+                },
+                {
+                    name: 'socialize',
+                    score: (data.personality.extraversion * 50) + (data.happiness < 50 ? 30 : 0) +
+                           (data.skills.social * 0.5)
+                },
+                {
+                    name: 'build',
+                    score: (data.skills.building * 0.8) + (data.personality.conscientiousness * 20) +
+                           (data.inventory.materials >= 10 ? 40 : 0)
+                },
+                {
+                    name: 'explore',
+                    score: (data.personality.openness * 40) + (Math.random() * 20)
+                },
+                {
+                    name: 'rest',
+                    score: ((100 - data.energy) * 0.5) + (data.personality.conscientiousness * 10)
+                }
+            ];
+
+            // Gestion des besoins primaires en priorité
+            if (data.hunger > 70) {
+                this.handleHunger(npc);
+                return;
+            }
+            if (data.thirst > 70) {
+                this.handleThirst(npc);
+                return;
+            }
+            if (data.energy < 30) {
+                data.state = 'resting';
+                data.thoughts.push({ content: "Je suis épuisé, je dois me reposer.", time: this.gameTime });
+                return;
+            }
+
+            // Choix de l'action basé sur les scores
+            const selectedAction = actions.reduce((prev, current) => 
+                (current.score > prev.score) ? current : prev
+            );
+
+            // Exécution de l'action choisie
+            switch (selectedAction.name) {
+                case 'gather':
+                    const resource = this.findNearestResource(npc, 'material');
+                    if (resource) {
+                        data.targetEntity = resource;
+                        data.targetPosition = resource.position.clone();
+                        data.state = 'moving_to_resource';
+                        data.thoughts.push({ content: "Je vais chercher des ressources.", time: this.gameTime });
+                    }
+                    break;
+                    
+                case 'socialize':
+                    const nearbyNPC = this.findNearestNPC(npc);
+                    if (nearbyNPC) {
+                        data.targetEntity = nearbyNPC;
+                        data.targetPosition = nearbyNPC.position.clone();
+                        data.state = 'moving_to_npc';
+                        data.thoughts.push({ content: `Je vais discuter avec ${nearbyNPC.userData.name}.`, time: this.gameTime });
+                    }
+                    break;
+                    
+                case 'build':
+                    if (data.skills.building > 3 && data.inventory.materials >= 10) {
+                        data.state = 'building';
+                        data.thoughts.push({ content: "Je vais construire quelque chose d'utile!", time: this.gameTime });
+                        this.buildStructure(npc);
+                    }
+                    break;
+                    
+                case 'explore':
+                    const randomAngle = Math.random() * Math.PI * 2;
+                    const randomDistance = 20 + Math.random() * 40;
+                    data.targetPosition = new THREE.Vector3(
+                        Math.cos(randomAngle) * randomDistance,
+                        0,
+                        Math.sin(randomAngle) * randomDistance
+                    );
+                    data.state = 'exploring';
+                    data.thoughts.push({ content: "Je vais explorer un peu plus loin.", time: this.gameTime });
+                    break;
+                    
+                case 'rest':
+                    data.state = 'resting';
+                    data.thoughts.push({ content: "Un peu de repos me fera du bien.", time: this.gameTime });
+                    break;
+            }
+        }
+    }
+
+    handleHunger(npc) {
+        const data = npc.userData;
+        if (data.inventory.food > 0) {
+            data.inventory.food--;
+            data.hunger = Math.max(0, data.hunger - 30);
+            data.state = 'eating';
+            data.thoughts.push({ content: "Je me sens mieux après avoir mangé.", time: this.gameTime });
+            setTimeout(() => { data.state = 'idle'; }, 2000);
+        } else if (this.communityResources.food > 10) {
+            this.communityResources.food -= 10;
+            data.hunger = Math.max(0, data.hunger - 30);
+            data.state = 'eating';
+            data.thoughts.push({ content: "Merci à la communauté pour cette nourriture.", time: this.gameTime });
+            setTimeout(() => { data.state = 'idle'; }, 2000);
+        } else {
+            const foodSource = this.findNearestResource(npc, 'food');
+            if (foodSource) {
+                data.targetEntity = foodSource;
+                data.targetPosition = foodSource.position.clone();
+                data.state = 'moving_to_resource';
+                data.thoughts.push({ content: "J'ai vraiment faim, je dois trouver de la nourriture.", time: this.gameTime });
+            }
+        }
+    }
+
+    handleThirst(npc) {
+        const data = npc.userData;
+        if (data.inventory.water > 0) {
+            data.inventory.water--;
+            data.thirst = Math.max(0, data.thirst - 30);
+            data.state = 'drinking';
+            data.thoughts.push({ content: "Cette eau était rafraîchissante.", time: this.gameTime });
+            setTimeout(() => { data.state = 'idle'; }, 2000);
+        } else if (this.communityResources.water > 10) {
+            this.communityResources.water -= 10;
+            data.thirst = Math.max(0, data.thirst - 30);
+            data.state = 'drinking';
+            data.thoughts.push({ content: "L'eau de la communauté est précieuse.", time: this.gameTime });
+            setTimeout(() => { data.state = 'idle'; }, 2000);
+        } else {
+            const waterSource = this.findNearestResource(npc, 'water');
+            if (waterSource) {
+                data.targetEntity = waterSource;
+                data.targetPosition = waterSource.position.clone();
+                data.state = 'moving_to_resource';
+                data.thoughts.push({ content: "Je dois trouver de l'eau rapidement.", time: this.gameTime });
+            }
+        }
+    }
+
+    updateNPCMovement(npc, deltaTime) {
+        const data = npc.userData;
+        if (data.targetPosition) {
+            const direction = data.targetPosition.clone().sub(npc.position).normalize();
+            const speed = 2 * deltaTime * this.timeSpeed;
+            npc.position.add(direction.multiplyScalar(speed));
+            if (npc.position.distanceTo(data.targetPosition) < 0.5) {
+                if (data.state === 'moving_to_resource') data.state = 'gathering';
+                else if (data.state === 'moving_to_npc') data.state = 'socializing';
+                data.targetPosition = null;
+            }
+        } else if (data.state === 'idle' && Math.random() < 0.01 * deltaTime * this.timeSpeed) {
+            data.targetPosition = new THREE.Vector3(
+                npc.position.x + (Math.random() - 0.5) * 10,
+                0,
+                npc.position.z + (Math.random() - 0.5) * 10
+            );
+        }
+    }
+
+    updateNPCSocialInteractions(npc, deltaTime) {
+        const data = npc.userData;
+        if (data.state === 'socializing' && data.targetEntity) {
+            const distance = npc.position.distanceTo(data.targetEntity.position);
+            if (distance < 3) {
+                data.happiness = Math.min(100, data.happiness + 0.1 * deltaTime * this.timeSpeed);
+                data.skills.social += 0.01 * deltaTime * this.timeSpeed;
+                if (Math.random() < 0.1) {
+                    data.state = 'idle';
+                    data.targetEntity = null;
+                    data.thoughts.push({ content: "Nice chat, feeling good!", time: this.gameTime });
+                }
+                if (Math.random() < 0.05 * deltaTime * this.timeSpeed) {
+                    this.exchangePoliticalOpinions(npc, data.targetEntity);
+                }
+            } else {
+                data.state = 'moving_to_npc';
+                data.targetPosition = data.targetEntity.position.clone();
+            }
+        }
+    }
+
+    exchangePoliticalOpinions(npc1, npc2) {
+        const data1 = npc1.userData;
+        const data2 = npc2.userData;
+        
+        if (this.governance.mayor) {
+            if (data1.skills.social > data2.skills.social && Math.random() < 0.3) {
+                data2.votesFor = data1.votesFor;
+                data2.thoughts.push({ 
+                    content: `${data1.name} a de bons arguments en faveur de ${data1.votesFor ? data1.votesFor.userData.name : 'personne'}.`, 
+                    time: this.gameTime 
+                });
+            } else if (data2.skills.social > data1.skills.social && Math.random() < 0.3) {
+                data1.votesFor = data2.votesFor;
+                data1.thoughts.push({ 
+                    content: `${data2.name} m'a convaincu de soutenir ${data2.votesFor ? data2.votesFor.userData.name : 'personne'}.`, 
+                    time: this.gameTime 
+                });
+            }
+        }
+        data1.happiness += data1.opinion === this.governance.currentLaw ? 5 : -2;
+        data2.happiness += data2.opinion === this.governance.currentLaw ? 5 : -2;
+    }
+
+    findNearestResource(npc, type) {
+        return this.resources
+            .filter(r => r.userData.type === type && r.userData.amount > 0)
+            .reduce((closest, current) => {
+                const distToCurrent = npc.position.distanceTo(current.position);
+                const distToClosest = closest ? npc.position.distanceTo(closest.position) : Infinity;
+                return distToCurrent < distToClosest ? current : closest;
+            }, null);
+    }
+
+    findNearestNPC(npc) {
+        return this.npcs
+            .filter(n => n !== npc)
+            .reduce((closest, current) => {
+                const distanceToCurrent = npc.position.distanceTo(current.position);
+                if (!closest || distanceToCurrent < npc.position.distanceTo(closest.position)) {
+                    return current;
+                }
+                return closest;
+            }, null);
+    }
+
+    handleNPCDeath(npc, index) {
+        // Supprime l'entité de la scène et du tableau des NPC
+        this.scene.remove(npc);
+        this.npcs.splice(index, 1);
+    }
+
+    buildStructure(npc) {
+        // Exemple de construction : création d'une petite cabane
+        const cabin = new THREE.Group();
+        const baseGeometry = new THREE.BoxGeometry(4, 3, 4);
+        const baseMaterial = new THREE.MeshStandardMaterial({ color: 0xCD853F, roughness: 0.8 });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        base.position.y = 1.5;
+        base.castShadow = true;
+        cabin.add(base);
+        cabin.position.copy(npc.position);
+        cabin.userData = { type: 'building' };
+        this.scene.add(cabin);
+        this.buildings.push(cabin);
+        npc.userData.inventory.materials -= 10;
+        npc.userData.thoughts.push({ content: "I've built a new structure!", time: this.gameTime });
+        npc.userData.state = 'idle';
+    }
+
+    gatherResource(npc, resource) {
+        const type = resource.userData.type;
+        if (resource.userData.amount > 0) {
+            resource.userData.amount -= 10;
+            npc.userData.inventory[type] = (npc.userData.inventory[type] || 0) + 10;
+            npc.userData.thoughts.push({ content: `Gathered some ${type}.`, time: this.gameTime });
+            npc.userData.state = 'idle';
+            npc.userData.targetEntity = null;
+        } else {
+            npc.userData.state = 'idle';
+            npc.userData.targetEntity = null;
+        }
+    }
+
+    contributeToCommunityCycle(npc) {
+        // Transfert d'une petite quantité d'inventaire vers les ressources communautaires
+        ['food', 'water', 'materials'].forEach(resource => {
+            if (npc.userData.inventory[resource] > 5) {
+                npc.userData.inventory[resource] -= 5;
+                this.communityResources[resource] += 5;
+                npc.userData.thoughts.push({ content: `Contributed 5 ${resource} to the community.`, time: this.gameTime });
+            }
+        });
+    }
+
+    triggerReproduction() {
+        // Création d'un nouveau NPC en tant que "descendant"
+        const newNPC = this.createNPC();
+        newNPC.position.copy(new THREE.Vector3(
+            (Math.random() - 0.5) * 20,
+            0,
+            (Math.random() - 0.5) * 20
+        ));
+        this.npcs.push(newNPC);
+        this.updateUIStats();
+    }
+
+    regenerateResources(deltaTime) {
+        this.resources.forEach(resource => {
+            resource.userData.amount = Math.min(200, resource.userData.amount + resource.userData.regrowRate * deltaTime * this.timeSpeed);
+        });
+    }
+
+    updateCommunityResourcesUI() {
+        const communityDiv = document.getElementById('community-resources');
+        if (communityDiv) {
+            communityDiv.innerHTML = `Food: ${this.communityResources.food} | Water: ${this.communityResources.water} | Materials: ${this.communityResources.materials}`;
+        }
+    }
+
+    updateUIStats() {
+        const statsDiv = document.getElementById('stats');
+        if (statsDiv) {
+            statsDiv.innerHTML = `Day: ${this.dayCount} | NPC Count: ${this.npcs.length}`;
+        }
+    }
